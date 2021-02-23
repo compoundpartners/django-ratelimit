@@ -4,7 +4,7 @@ from django_ratelimit import __version__
 
 
 setup(
-    name='django-ratelimit',
+    name='js-ratelimit',
     version=__version__,
     description='Cache-based rate-limiting for Django.',
     long_description=open('README.rst').read(),
