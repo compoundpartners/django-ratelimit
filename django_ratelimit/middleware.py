@@ -22,6 +22,22 @@ STAGE = getattr(
     'STAGE',
     'stage',
 )
+RATELIMIT_VIEW = getattr(
+    settings,
+    'RATELIMIT_VIEW',
+    False,
+)
+RATELIMIT_SENTRY_ONLY = getattr(
+    settings,
+    'RATELIMIT_SENTRY_ONLY',
+    False,
+)
+try:
+    from sentry_sdk import capture_exception
+    RATELIMIT_SENTRY = True
+except ImportError:
+    RATELIMIT_SENTRY = False
+
 
 class RatelimitMiddleware:
     def __init__(self, get_response):
@@ -31,10 +47,15 @@ class RatelimitMiddleware:
         return self.get_response(request)
 
     def process_exception(self, request, exception):
-        if not isinstance(exception, Ratelimited):
-            return None
-        view = import_string(settings.RATELIMIT_VIEW)
-        return view(request, exception)
+        if isinstance(exception, Ratelimited):
+            if RATELIMIT_SENTRY:
+                capture_exception(exception)
+            if RATELIMIT_SENTRY_ONLY:
+                return None
+            if RATELIMIT_VIEW:
+                view = import_string(RATELIMIT_VIEW)
+                return view(request, exception)
+        return None
 
 
 class RatelimitForAllViewsMiddleware(MiddlewareMixin):
@@ -60,4 +81,12 @@ class RatelimitForAllViewsMiddleware(MiddlewareMixin):
                                          increment=True)
             request.limited = ratelimited or old_limited
             if ratelimited:
+                if RATELIMIT_SENTRY:
+                    capture_exception(Ratelimited())
+                if RATELIMIT_SENTRY_ONLY:
+                    return None
+                # if RATELIMIT_VIEW:
+                    # view = import_string(RATELIMIT_VIEW)
+                    # return view(request, exception)
                 raise Ratelimited()
+
