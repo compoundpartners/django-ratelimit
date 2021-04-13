@@ -66,7 +66,7 @@ class RatelimitForAllViewsMiddleware(MiddlewareMixin):
             return None
         if match.url_name in ('pages-root', 'pages-details-by-slug'):
             return 'cms.page', RATELIMIT_PAGE
-        elif hasattr(match, 'app_names'):
+        elif hasattr(match, 'app_names') and not 'admin' in match.app_names:
             return str(match.func), RATELIMIT_MODULE
         return None
 
